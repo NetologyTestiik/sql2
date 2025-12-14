@@ -1,57 +1,72 @@
-﻿package ru.netology;
+package ru.netology.test;
 
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
+import ru.netology.data.DataHelper;
+import ru.netology.data.SQLHelper;
+import ru.netology.page.LoginPage;
 
-import java.sql.DriverManager;
+import static com.codeborne.selenide.Selenide.open;
+import static ru.netology.data.SQLHelper.cleanAuthCodes;
+import static ru.netology.data.SQLHelper.cleanDatabase;
 
-public class BankLoginTest {
+class BankLoginTest {
+
+    LoginPage loginPage;
+
+    @AfterEach
+    void tearDown() {
+        cleanAuthCodes();
+    }
+
+    @AfterAll
+    static void tearDownAll() {
+        cleanDatabase();
+    }
+
+    @BeforeEach
+    void setUp() {
+        loginPage = open("http://localhost:9999", LoginPage.class);
+    }
 
     @Test
-    void shouldLogin() throws Exception {
-        System.out.println("=== Starting test ===");
-        
-        // 1. Проверяем подключение к БД
-        try (var conn = DriverManager.getConnection(
-                "jdbc:mysql://localhost:3306/app", "app", "pass")) {
-            System.out.println("✓ Connected to database");
-            
-            // 2. Проверяем таблицы
-            var stmt = conn.createStatement();
-            var rs = stmt.executeQuery("SHOW TABLES");
-            System.out.println("Database tables:");
-            boolean hasTables = false;
-            while (rs.next()) {
-                System.out.println("  - " + rs.getString(1));
-                hasTables = true;
-            }
-            
-            if (!hasTables) {
-                System.out.println("✗ No tables found!");
-            }
-            
-            // 3. Проверяем пользователя vasya
-            rs = stmt.executeQuery("SELECT * FROM users WHERE login = 'vasya'");
-            if (rs.next()) {
-                System.out.println("✓ Found user vasya");
-                System.out.println("  ID: " + rs.getString("id"));
-                System.out.println("  Password hash: " + rs.getString("password"));
-                System.out.println("  Status: " + rs.getString("status"));
-            } else {
-                System.out.println("✗ User vasya not found!");
-            }
-            
-            // 4. Проверяем auth_codes
-            rs = stmt.executeQuery("SELECT COUNT(*) as count FROM auth_codes");
-            if (rs.next()) {
-                System.out.println("✓ Auth codes table has " + rs.getInt("count") + " rows");
-            }
-            
-        } catch (Exception e) {
-            System.err.println("✗ Database error: " + e.getMessage());
-            e.printStackTrace();
-            throw e;
+    @DisplayName("Позитивный тест")
+    void shouldSuccessfulLogin() {
+        var loginPage = open("http://Localhost:9999", LoginPage.class);
+        var authInfo = DataHelper.getAuthInfo();
+        var verificationPage = loginPage.validLogin(authInfo);
+        verificationPage.verifyVerificationPageVisibility();
+        var verificationCode = SQLHelper.getVerificationCode();
+        verificationPage.validVerify(verificationCode.getCode());
+    }
+
+    @Test
+    @DisplayName("Неверно указано имя пользователя")
+    void shouldErrorInvalidLogin() {
+        var authInfo = DataHelper.generateRandomUser();
+        loginPage.validLogin(authInfo);
+        loginPage.verifyErrorNotification("Ошибка! Неверно указан логин или пароль");
+    }
+
+    @Test
+    @DisplayName("Неверно указан код верификации")
+    void shouldInvalidCodes() {
+        var authInfo = DataHelper.getAuthInfo();
+        var verificationPage = loginPage.validLogin(authInfo);
+        verificationPage.verifyVerificationPageVisibility();
+        var verificationCode = DataHelper.generateRandomVerificationCode();
+        verificationPage.verify(verificationCode.getCode());
+        verificationPage.verifyErrorNotification("Ошибка! Неверно указан код! Попробуйте ещё раз.");
+    }
+
+    @Test
+    @DisplayName("Ввод неправильного пароля 3 раза")
+    void shouldLockAfterThreeUnsuccessfulPasswords() {
+        var authInfo = DataHelper.generateRandomUser();
+        var verificationPage = loginPage.validLogin(authInfo);
+        verificationPage.verifyErrorNotification("Ошибка! Неверно указан логин или пароль");
+        for (int count = 0; count < 3; count++) {
+            loginPage.validLogin(DataHelper.generateRandomUser());
         }
-        
-        System.out.println("=== Test completed ===");
+        verificationPage.verifyErrorNotification("Превышено максимальное количество попыток авторизации");
     }
 }
