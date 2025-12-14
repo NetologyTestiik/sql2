@@ -1,0 +1,15 @@
+﻿image: Ubuntu2204
+
+stack: java 11
+
+branches:
+  only:
+    - main
+
+install:
+  - chmod +x gradlew
+
+build: off
+
+test_script:
+  - ./gradlew test

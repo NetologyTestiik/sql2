@@ -1,0 +1,26 @@
+﻿# Gradle
+.gradle
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build
+out/
+target/
+
+# Logs
+*.log
+logs/
+
+# Misc
+*.jar
+!artifacts/app-deadline.jar
