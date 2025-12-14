@@ -1,4 +1,4 @@
-﻿package ru.netology;
+package ru.netology;
 
 import com.codeborne.selenide.Condition;
 import org.junit.jupiter.api.Test;
@@ -43,7 +43,7 @@ public class BankLoginTest {
                 $("[data-test-id=action-verify]").click();
             }
 
-            $("h2").shouldHave(Condition.exactText("Личный кабинет"));
+            $("h2").shouldHave(Condition.exactText("Р›РёС‡РЅС‹Р№ РєР°Р±РёРЅРµС‚"));
         }
     }
 }
